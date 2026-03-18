@@ -1,0 +1,6 @@
+# South African Financial Compliance App - Python requirements (if using Python tooling)
+# This is a Next.js/TypeScript project. For JS dependencies use:
+#   pnpm install
+
+# Placeholder for any Python scripts or tooling:
+# requests>=2.28.0

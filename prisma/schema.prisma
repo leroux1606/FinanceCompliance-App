@@ -1,0 +1,83 @@
+// South African Financial Compliance App - Database Schema
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Company {
+  id              String   @id @default(cuid())
+  name            String
+  industry        String
+  financialYearEnd String  // Format: YYYY-MM-DD
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  trialBalances  TrialBalance[]
+  reports        ComplianceReport[]
+}
+
+model TrialBalance {
+  id        String   @id @default(cuid())
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  periodEnd DateTime // Financial period end date
+  uploadedAt DateTime @default(now())
+
+  entries        TrialBalanceEntry[]
+  checkResults   ComplianceCheckResult[]
+  reports        ComplianceReport[]
+}
+
+model TrialBalanceEntry {
+  id             String   @id @default(cuid())
+  trialBalanceId String
+  trialBalance   TrialBalance @relation(fields: [trialBalanceId], references: [id], onDelete: Cascade)
+  accountCode    String
+  accountName    String
+  debit          Float    @default(0)
+  credit         Float    @default(0)
+}
+
+model ComplianceRule {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  category    String   // IFRS | COMPANIES_ACT | TAX
+  description String
+  severity    String   // LOW | MEDIUM | HIGH
+  enabled     Boolean  @default(true)
+  config      String?  // JSON for rule-specific configuration
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  results     ComplianceCheckResult[]
+}
+
+model ComplianceCheckResult {
+  id             String   @id @default(cuid())
+  trialBalanceId String
+  trialBalance   TrialBalance @relation(fields: [trialBalanceId], references: [id], onDelete: Cascade)
+  ruleId         String
+  rule           ComplianceRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  status         String   // COMPLIANT | WARNING | HIGH_RISK
+  riskScore      Int      // 0-100
+  message        String
+  details        String?  // JSON for additional context
+  createdAt      DateTime @default(now())
+}
+
+model ComplianceReport {
+  id             String   @id @default(cuid())
+  companyId      String
+  company        Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  trialBalanceId String
+  trialBalance   TrialBalance @relation(fields: [trialBalanceId], references: [id], onDelete: Cascade)
+  complianceScore Int     // 0-100
+  riskLevel      String  // LOW | MEDIUM | HIGH
+  summaryJson    String  // Executive summary, issues, recommendations
+  generatedAt    DateTime @default(now())
+}

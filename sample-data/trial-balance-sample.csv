@@ -1,0 +1,18 @@
+accountCode,accountName,debit,credit
+1000,Share Capital,0,500000
+1100,Retained Earnings,0,125000
+2000,Revenue / Sales,0,850000
+2100,Cost of Sales,320000,0
+2200,Operating Expenses,180000,0
+2300,Salaries and Wages,150000,0
+2400,PAYE Payable,0,28500
+2500,UIF Payable,0,2100
+3000,Trade Receivables (Debtors),95000,0
+3100,Trade Payables (Creditors),0,45000
+4000,Bank,120000,0
+4100,Fixed Assets - PPE,250000,0
+4200,Accumulated Depreciation,0,50000
+5000,VAT Input,28500,0
+5100,VAT Output,0,127500
+6000,Income Tax Expense,35000,0
+6100,Current Tax Payable,0,28000
