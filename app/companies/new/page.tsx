@@ -6,15 +6,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
 const INDUSTRIES = [
-  'Manufacturing',
-  'Retail',
-  'Services',
+  'Agriculture',
   'Construction',
-  'Technology',
   'Financial Services',
   'Healthcare',
-  'Agriculture',
+  'Manufacturing',
   'Mining',
+  'Retail',
+  'Services',
+  'Technology',
+  'Wholesale and Retail',
   'Other',
 ];
 

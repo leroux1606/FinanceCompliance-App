@@ -8,6 +8,15 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String?
+  role         String   @default("USER") // USER | ADMIN
+  createdAt    DateTime @default(now())
+}
+
 model Company {
   id              String   @id @default(cuid())
   name            String
@@ -30,6 +39,8 @@ model TrialBalance {
   entries        TrialBalanceEntry[]
   checkResults   ComplianceCheckResult[]
   reports        ComplianceReport[]
+
+  @@index([companyId])
 }
 
 model TrialBalanceEntry {
@@ -38,15 +49,17 @@ model TrialBalanceEntry {
   trialBalance   TrialBalance @relation(fields: [trialBalanceId], references: [id], onDelete: Cascade)
   accountCode    String
   accountName    String
-  debit          Float    @default(0)
-  credit         Float    @default(0)
+  debit          Decimal  @default(0)
+  credit         Decimal  @default(0)
+
+  @@index([trialBalanceId])
 }
 
 model ComplianceRule {
   id          String   @id @default(cuid())
   code        String   @unique
   name        String
-  category    String   // IFRS | COMPANIES_ACT | TAX
+  category    String   // IFRS | COMPANIES_ACT | TAX | VALIDATION
   description String
   severity    String   // LOW | MEDIUM | HIGH
   enabled     Boolean  @default(true)
@@ -55,6 +68,9 @@ model ComplianceRule {
   updatedAt   DateTime @updatedAt
 
   results     ComplianceCheckResult[]
+
+  @@index([category])
+  @@index([enabled])
 }
 
 model ComplianceCheckResult {
@@ -68,6 +84,9 @@ model ComplianceCheckResult {
   message        String
   details        String?  // JSON for additional context
   createdAt      DateTime @default(now())
+
+  @@index([trialBalanceId])
+  @@index([ruleId])
 }
 
 model ComplianceReport {
@@ -80,4 +99,7 @@ model ComplianceReport {
   riskLevel      String  // LOW | MEDIUM | HIGH
   summaryJson    String  // Executive summary, issues, recommendations
   generatedAt    DateTime @default(now())
+
+  @@index([companyId])
+  @@index([trialBalanceId])
 }

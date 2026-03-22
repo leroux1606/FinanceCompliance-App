@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
@@ -39,33 +40,47 @@ const SAMPLE_TRIAL_BALANCE = [
 async function main() {
   console.log('Seeding database...');
 
+  // Create default admin user if none exist
+  const userCount = await prisma.user.count();
+  if (userCount === 0) {
+    const passwordHash = await bcrypt.hash('changeme123', 12);
+    await prisma.user.create({
+      data: {
+        email: 'admin@example.com',
+        passwordHash,
+        name: 'Admin',
+        role: 'ADMIN',
+      },
+    });
+    console.log('Default admin user created: admin@example.com / changeme123');
+  }
+
   for (const r of COMPLIANCE_RULES) {
     await prisma.complianceRule.upsert({
       where: { code: r.code },
-      create: { ...r, description: r.description, config: null },
+      create: { ...r, config: null },
       update: { name: r.name, category: r.category, severity: r.severity },
     });
   }
   console.log('Compliance rules seeded.');
 
-  let company = await prisma.company.findFirst({
+  const existingCompany = await prisma.company.findFirst({
     where: { name: 'Acme Trading (Pty) Ltd' },
     include: { trialBalances: true },
   });
-  if (!company) {
-    company = await prisma.company.create({
-      data: {
-        name: 'Acme Trading (Pty) Ltd',
-        industry: 'Wholesale and Retail',
-        financialYearEnd: '2024-02-28',
-      },
-    });
-  }
 
-  if (company.trialBalances && (company as { trialBalances: unknown[] }).trialBalances.length > 0) {
+  if (existingCompany?.trialBalances?.length) {
     console.log('Sample data already exists. Skipping trial balance creation.');
     return;
   }
+
+  const company = existingCompany ?? await prisma.company.create({
+    data: {
+      name: 'Acme Trading (Pty) Ltd',
+      industry: 'Wholesale and Retail',
+      financialYearEnd: '2024-02-28',
+    },
+  });
 
   const fyEnd = new Date('2024-02-28');
   const tb = await prisma.trialBalance.create({
@@ -89,19 +104,25 @@ async function main() {
   const { runComplianceChecks } = await import('../src/lib/compliance-engine');
   const summary = runComplianceChecks(SAMPLE_TRIAL_BALANCE);
 
-  for (const r of summary.results) {
-    const rule = rules.find((ru) => ru.code === r.ruleCode) ?? rules[0];
-    await prisma.complianceCheckResult.create({
-      data: {
+  const resultsData = summary.results
+    .map((r) => {
+      const rule = rules.find((ru) => ru.code === r.ruleCode);
+      if (!rule) {
+        console.error(`[Seed] No rule found for code: ${r.ruleCode}. Skipping.`);
+        return null;
+      }
+      return {
         trialBalanceId: tb.id,
         ruleId: rule.id,
         status: r.status,
         riskScore: r.riskScore,
         message: r.message,
         details: r.details ? JSON.stringify(r.details) : null,
-      },
-    });
-  }
+      };
+    })
+    .filter((x): x is NonNullable<typeof x> => x !== null);
+
+  await prisma.complianceCheckResult.createMany({ data: resultsData });
 
   const reportData = {
     executiveSummary: `Compliance assessment completed for ${company.name}. Overall score: ${summary.overallScore}%. Risk level: ${summary.riskLevel}.`,

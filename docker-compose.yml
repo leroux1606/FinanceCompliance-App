@@ -1,0 +1,28 @@
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: "file:/app/data/prod.db"
+      NEXTAUTH_SECRET: "${NEXTAUTH_SECRET}"
+      NEXTAUTH_URL: "${NEXTAUTH_URL:-http://localhost:3000}"
+      NODE_ENV: "production"
+    volumes:
+      # Persist SQLite database across container restarts
+      - ./data:/app/data
+    restart: unless-stopped
+
+# Note: For production deployments, replace SQLite with PostgreSQL:
+#
+#   db:
+#     image: postgres:16-alpine
+#     environment:
+#       POSTGRES_DB: compliance
+#       POSTGRES_USER: compliance
+#       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+#     volumes:
+#       - postgres_data:/var/lib/postgresql/data
+#
+# Then update DATABASE_URL to: "postgresql://compliance:${POSTGRES_PASSWORD}@db:5432/compliance"
+# and change the Prisma provider from "sqlite" to "postgresql"

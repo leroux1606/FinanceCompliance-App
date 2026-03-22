@@ -2,8 +2,12 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/src/lib/db';
 import { parseCSV, parseExcel, validateColumns } from '@/src/lib/compliance-engine';
 import { runComplianceChecks } from '@/src/lib/compliance-engine';
+import { requireSession } from '@/src/lib/auth';
 
 export async function POST(request: Request) {
+  const unauth = await requireSession();
+  if (unauth) return unauth;
+
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File;
@@ -61,17 +65,9 @@ export async function POST(request: Request) {
       );
     }
 
-    const totalDebits = rows.reduce((s, r) => s + r.debit, 0);
-    const totalCredits = rows.reduce((s, r) => s + r.credit, 0);
-    const diff = Math.abs(totalDebits - totalCredits);
-    if (diff > 0.01) {
-      return NextResponse.json(
-        {
-          error: `Trial balance does not balance. Debits: R${totalDebits.toLocaleString('en-ZA')}, Credits: R${totalCredits.toLocaleString('en-ZA')}`,
-        },
-        { status: 400 }
-      );
-    }
+    // Note: we no longer hard-reject unbalanced trial balances here.
+    // The compliance engine's TB_BALANCE check will flag this as HIGH_RISK in the report,
+    // giving the user actionable feedback rather than a raw error.
 
     const trialBalance = await prisma.trialBalance.create({
       data: {
@@ -90,7 +86,7 @@ export async function POST(request: Request) {
       })),
     });
 
-    let rules = await prisma.complianceRule.findMany({ where: { enabled: true } });
+    const rules = await prisma.complianceRule.findMany({ where: { enabled: true } });
     if (rules.length === 0) {
       return NextResponse.json(
         { error: 'Compliance rules not initialized. Please run: pnpm run db:seed' },
@@ -99,18 +95,28 @@ export async function POST(request: Request) {
     }
     const summary = runComplianceChecks(rows);
 
-    for (const r of summary.results) {
-      const rule = rules.find((ru) => ru.code === r.ruleCode) ?? rules[0];
-      await prisma.complianceCheckResult.create({
-        data: {
+    // Build results array, skipping any check whose ruleCode has no matching DB rule
+    const resultsData = summary.results
+      .map((r) => {
+        const rule = rules.find((ru) => ru.code === r.ruleCode);
+        if (!rule) {
+          console.error(`[Upload] No rule found for code: ${r.ruleCode}. Skipping result.`);
+          return null;
+        }
+        return {
           trialBalanceId: trialBalance.id,
           ruleId: rule.id,
           status: r.status,
           riskScore: r.riskScore,
           message: r.message,
           details: r.details ? JSON.stringify(r.details) : null,
-        },
-      });
+        };
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null);
+
+    // Batch insert all check results in a single query instead of N sequential creates
+    if (resultsData.length > 0) {
+      await prisma.complianceCheckResult.createMany({ data: resultsData });
     }
 
     const reportData = {

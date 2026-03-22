@@ -2,6 +2,7 @@ import React from 'react';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/src/lib/db';
 import { Document, Page, Text, View, StyleSheet, pdf } from '@react-pdf/renderer';
+import { requireSession } from '@/src/lib/auth';
 
 const styles = StyleSheet.create({
   page: { padding: 40, fontFamily: 'Helvetica' },
@@ -88,6 +89,9 @@ export async function GET(
   _request: Request,
   { params }: { params: { id: string } }
 ) {
+  const unauth = await requireSession();
+  if (unauth) return unauth;
+
   try {
     const report = await prisma.complianceReport.findUnique({
       where: { id: params.id },
@@ -101,7 +105,7 @@ export async function GET(
       recommendations?: string[];
     };
 
-    const issues = (data.issues || report.trialBalance.checkResults)
+    const issues = (data.issues ?? report.trialBalance.checkResults)
       .filter((r: { status?: string }) => r.status !== 'COMPLIANT')
       .map((r: { ruleName?: string; rule?: { name: string }; status?: string; message?: string }) => ({
         ruleName: r.ruleName ?? r.rule?.name ?? 'Check',

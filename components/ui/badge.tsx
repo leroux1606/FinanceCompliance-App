@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { cn } from './button';
+import { cn } from '@/src/lib/utils';
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
   variant?: 'default' | 'success' | 'warning' | 'danger' | 'destructive' | 'secondary' | 'outline';

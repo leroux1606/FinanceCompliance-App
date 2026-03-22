@@ -1,4 +1,5 @@
 import * as XLSX from 'xlsx';
+import { parse as parseCSVSync } from 'csv-parse/sync';
 import type { TrialBalanceRow } from './types';
 
 const REQUIRED_COLUMNS = ['accountCode', 'accountName', 'debit', 'credit'];
@@ -32,59 +33,48 @@ function parseNumber(value: string | number): number {
 }
 
 export function parseCSV(content: string): { rows: TrialBalanceRow[]; headers: string[] } {
-  const lines = content.trim().split(/\r?\n/).filter(Boolean);
-  if (lines.length < 2) return { rows: [], headers: [] };
+  // Use csv-parse for robust RFC 4180 handling (escaped quotes, quoted commas, etc.)
+  const records = parseCSVSync(content, {
+    columns: true,
+    skip_empty_lines: true,
+    trim: true,
+    relax_column_count: true,
+  }) as Record<string, string>[];
 
-  const rawHeaders = lines[0].split(',').map((h) => h.trim().replace(/^["']|["']$/g, ''));
+  if (records.length === 0) return { rows: [], headers: [] };
+
+  // Extract original header names from the first record's keys
+  const rawHeaders = Object.keys(records[0]);
   const headers = rawHeaders.map(normalizeColumn);
 
   const rows: TrialBalanceRow[] = [];
-  for (let i = 1; i < lines.length; i++) {
-    const values = parseCSVLine(lines[i]);
-    const row: Record<string, string | number> = {};
-    rawHeaders.forEach((h, idx) => {
-      row[normalizeColumn(h)] = values[idx] ?? '';
-    });
+  records.forEach((record, i) => {
+    // Build a normalized key→value map
+    const normalized: Record<string, string> = {};
+    for (const [key, val] of Object.entries(record)) {
+      normalized[normalizeColumn(key)] = val;
+    }
 
-    const accountCode = String(row.accountCode ?? '').trim();
-    const accountName = String(row.accountName ?? '').trim();
-    if (!accountCode && !accountName) continue;
+    const accountCode = (normalized.accountCode ?? '').trim();
+    const accountName = (normalized.accountName ?? '').trim();
+    if (!accountCode && !accountName) return;
 
     rows.push({
-      accountCode: accountCode || `ROW_${i}`,
+      accountCode: accountCode || `ROW_${i + 1}`,
       accountName: accountName || 'Unnamed',
-      debit: parseNumber(row.debit as string | number),
-      credit: parseNumber(row.credit as string | number),
+      debit: parseNumber(normalized.debit ?? '0'),
+      credit: parseNumber(normalized.credit ?? '0'),
     });
-  }
+  });
 
   return { rows, headers };
-}
-
-function parseCSVLine(line: string): string[] {
-  const result: string[] = [];
-  let current = '';
-  let inQuotes = false;
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
-    if (ch === '"' || ch === "'") {
-      inQuotes = !inQuotes;
-    } else if ((ch === ',' && !inQuotes) || ch === '\t') {
-      result.push(current.trim());
-      current = '';
-    } else {
-      current += ch;
-    }
-  }
-  result.push(current.trim());
-  return result;
 }
 
 export function parseExcel(buffer: Buffer): { rows: TrialBalanceRow[]; headers: string[] } {
   const workbook = XLSX.read(buffer, { type: 'buffer' });
   const sheetName = workbook.SheetNames[0];
   const sheet = workbook.Sheets[sheetName];
-  const data = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { header: 1 }) as unknown[][];
+  const data = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as unknown[][];
 
   if (!data || data.length < 2) return { rows: [], headers: [] };
 
@@ -111,8 +101,8 @@ export function parseExcel(buffer: Buffer): { rows: TrialBalanceRow[]; headers: 
     rows.push({
       accountCode: accountCode || `ROW_${i}`,
       accountName: accountName || 'Unnamed',
-      debit: parseNumber(row[debitIdx] ?? 0),
-      credit: parseNumber(row[creditIdx] ?? 0),
+      debit: parseNumber((row[debitIdx] as string | number) ?? 0),
+      credit: parseNumber((row[creditIdx] as string | number) ?? 0),
     });
   }
 

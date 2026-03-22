@@ -1,14 +1,16 @@
 import type { TrialBalanceRow, CheckResult, ComplianceSummary, RiskLevel } from './types';
-import { runTrialBalanceBalances } from './checks';
-import { runRevenueExpenseReasonability } from './checks';
-import { runMissingKeyAccounts } from './checks';
-import { runUnusualNegativeBalances } from './checks';
-import { runCompaniesActCompleteness } from './checks';
-import { runVATIndicators } from './checks';
-import { runPAYEChecks } from './checks';
-import { runProvisionalTaxIndicators } from './checks';
-import { runDuplicateEntries } from './checks';
-import { runLargeUnexplainedValues } from './checks';
+import {
+  runTrialBalanceBalances,
+  runRevenueExpenseReasonability,
+  runMissingKeyAccounts,
+  runUnusualNegativeBalances,
+  runCompaniesActCompleteness,
+  runVATIndicators,
+  runPAYEChecks,
+  runProvisionalTaxIndicators,
+  runDuplicateEntries,
+  runLargeUnexplainedValues,
+} from './checks';
 
 const ALL_CHECKS = [
   runTrialBalanceBalances,

@@ -6,10 +6,17 @@ import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
+function getDefaultPeriod() {
+  const d = new Date();
+  d.setMonth(d.getMonth() - 1);
+  return d.toISOString().slice(0, 10);
+}
+
 export default function UploadPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
-  const [periodEnd, setPeriodEnd] = useState('');
+  // Initialize with default so the form submits without the user touching the date
+  const [periodEnd, setPeriodEnd] = useState(getDefaultPeriod);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -34,7 +41,7 @@ export default function UploadPage({ params }: { params: { id: string } }) {
         body: formData,
       });
 
-      const data = await res.json();
+      const data = await res.json() as { error?: string; reportId?: string };
 
       if (!res.ok) {
         setError(data.error ?? 'Upload failed');
@@ -46,16 +53,12 @@ export default function UploadPage({ params }: { params: { id: string } }) {
       } else {
         router.push(`/companies/${params.id}`);
       }
-    } catch (err) {
+    } catch {
       setError('Failed to upload. Please try again.');
     } finally {
       setUploading(false);
     }
   };
-
-  const fyEnd = new Date();
-  fyEnd.setMonth(fyEnd.getMonth() - 1);
-  const defaultPeriod = fyEnd.toISOString().slice(0, 10);
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -70,7 +73,7 @@ export default function UploadPage({ params }: { params: { id: string } }) {
           <CardTitle>Upload Trial Balance</CardTitle>
           <p className="text-sm text-slate-500">
             Upload a CSV or Excel file with columns: accountCode (or code), accountName (or name),
-            debit, credit. Ensure debits equal credits.
+            debit, credit.
           </p>
         </CardHeader>
         <CardContent>
@@ -81,10 +84,11 @@ export default function UploadPage({ params }: { params: { id: string } }) {
               </label>
               <input
                 type="date"
-                value={periodEnd || defaultPeriod}
+                value={periodEnd}
                 onChange={(e) => setPeriodEnd(e.target.value)}
                 className="w-full rounded-lg border border-slate-300 px-4 py-2 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
                 required
+                aria-label="Period end date"
               />
             </div>
             <div>
@@ -97,9 +101,10 @@ export default function UploadPage({ params }: { params: { id: string } }) {
                 onChange={(e) => setFile(e.target.files?.[0] ?? null)}
                 className="w-full rounded-lg border border-slate-300 px-4 py-2 file:mr-4 file:rounded file:border-0 file:bg-emerald-50 file:px-4 file:py-2 file:text-emerald-700"
                 required
+                aria-label="Select trial balance file (CSV or Excel)"
               />
             </div>
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && <p className="text-sm text-red-600" role="alert">{error}</p>}
             <div className="flex gap-3">
               <Button type="submit" disabled={uploading}>
                 {uploading ? 'Processing...' : 'Upload & Run Compliance'}

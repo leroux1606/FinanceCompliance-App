@@ -349,7 +349,7 @@ export function runDuplicateEntries(rows: TrialBalanceRow[]): CheckResult {
     seen.get(key)!.push(i);
   }
 
-  const duplicates = [...seen.entries()].filter(([, indices]) => indices.length > 1);
+  const duplicates = Array.from(seen.entries()).filter(([, indices]) => indices.length > 1);
 
   if (duplicates.length === 0) {
     return {

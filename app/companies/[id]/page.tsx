@@ -31,7 +31,7 @@ export default function CompanyDetailPage({ params }: { params: { id: string } }
 
   if (loading || !company) {
     return (
-      <div className="flex min-h-[200px] items-center justify-center">
+      <div className="flex min-h-[200px] items-center justify-center" role="status" aria-label="Loading company details">
         <p className="text-slate-500">Loading...</p>
       </div>
     );
@@ -61,7 +61,7 @@ export default function CompanyDetailPage({ params }: { params: { id: string } }
             {company.trialBalances.length === 0 ? (
               <p className="text-slate-500">No trial balances uploaded yet.</p>
             ) : (
-              <ul className="space-y-3">
+              <ul className="space-y-3" aria-label="Trial balances list">
                 {company.trialBalances.map((tb) => (
                   <li key={tb.id} className="flex items-center justify-between rounded-lg border p-3">
                     <span className="text-sm">
@@ -71,12 +71,12 @@ export default function CompanyDetailPage({ params }: { params: { id: string } }
                       const report = company.reports.find((r) => r.trialBalanceId === tb.id);
                       return report ? (
                         <Link href={`/report/${report.id}`}>
-                          <Button variant="outline" size="sm">
+                          <Button variant="outline" size="sm" aria-label={`View report for period ${new Date(tb.periodEnd).toLocaleDateString('en-ZA')}`}>
                             View Report
                           </Button>
                         </Link>
                       ) : (
-                        <Button variant="outline" size="sm" disabled>
+                        <Button variant="outline" size="sm" disabled aria-label="No report available">
                           No Report
                         </Button>
                       );

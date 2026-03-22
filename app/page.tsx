@@ -6,116 +6,90 @@ import { Building2, FileCheck, BarChart3, Shield } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
+interface DashboardStats {
+  companies: number;
+  trialBalances: number;
+  avgScore: number;
+  recentReports: {
+    id: string;
+    companyId: string;
+    companyName: string;
+    score: number;
+    riskLevel: string;
+    generatedAt: string;
+  }[];
+}
+
 export default function DashboardPage() {
-  const [stats, setStats] = useState<{
-    companies: number;
-    trialBalances: number;
-    avgScore: number;
-    lastReport?: { company: string; score: number };
-  } | null>(null);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
 
   useEffect(() => {
-    fetch('/api/companies')
+    fetch('/api/dashboard/stats')
       .then((r) => r.json())
-      .then((companies: { id: string; name: string }[]) => {
-        const companyIds = companies.map((c) => c.id);
-        return Promise.all(
-          companyIds.map((id) =>
-            fetch(`/api/companies/${id}`).then((r) => r.json())
-          )
-        ).then((details) => ({
-          companies: companies.length,
-          trialBalances: details.reduce(
-            (s, d) => s + (d.trialBalances?.length ?? 0),
-            0
-          ),
-          details,
-          companiesList: companies,
-        }));
-      })
-      .then((data: { companies: number; trialBalances: number; details: { trialBalances?: { checkResults?: { rule?: { code: string }; status: string; riskScore: number }[]; company?: { name: string } }[]; reports?: { complianceScore: number }[] }[]; companiesList: { id: string; name: string }[] }) => {
-        let totalScore = 0;
-        let scoreCount = 0;
-        let lastReport: { company: string; score: number } | undefined;
-
-        for (const d of data.details) {
-          const reports = (d as { reports?: { complianceScore: number; company?: { name: string } }[] }).reports;
-          if (reports?.length) {
-            const latest = reports[reports.length - 1];
-            totalScore += latest.complianceScore;
-            scoreCount++;
-            lastReport = {
-              company: (latest as { company?: { name: string } }).company?.name ?? data.companiesList.find((c) => c.id === (d as { id: string }).id)?.name ?? 'Unknown',
-              score: latest.complianceScore,
-            };
-          }
-        }
-
-        setStats({
-          companies: data.companies,
-          trialBalances: data.trialBalances,
-          avgScore: scoreCount > 0 ? Math.round(totalScore / scoreCount) : 0,
-          lastReport,
-        });
-      })
-      .catch(() => setStats({ companies: 0, trialBalances: 0, avgScore: 0 }));
+      .then((data: DashboardStats) => setStats(data))
+      .catch(() =>
+        setStats({ companies: 0, trialBalances: 0, avgScore: 0, recentReports: [] })
+      );
   }, []);
+
+  const lastReport = stats?.recentReports[0];
 
   return (
     <div>
-      <h1 className="text-3xl font-bold text-slate-800 mb-2">
+      <h1 className="mb-2 text-3xl font-bold text-slate-800">
         South African Financial Compliance
       </h1>
-      <p className="text-slate-600 mb-8">
+      <p className="mb-8 text-slate-600">
         Assess financial compliance and audit readiness aligned with IFRS, Companies Act, and SARS.
       </p>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
+      <div className="mb-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-slate-600">
-              Companies
-            </CardTitle>
+            <CardTitle className="text-sm font-medium text-slate-600">Companies</CardTitle>
             <Building2 className="h-4 w-4 text-slate-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.companies ?? 0}</div>
+            <div className="text-2xl font-bold">{stats?.companies ?? '—'}</div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-slate-600">
-              Trial Balances
-            </CardTitle>
+            <CardTitle className="text-sm font-medium text-slate-600">Trial Balances</CardTitle>
             <FileCheck className="h-4 w-4 text-slate-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.trialBalances ?? 0}</div>
+            <div className="text-2xl font-bold">{stats?.trialBalances ?? '—'}</div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-slate-600">
-              Avg Compliance %
-            </CardTitle>
+            <CardTitle className="text-sm font-medium text-slate-600">Avg Compliance</CardTitle>
             <BarChart3 className="h-4 w-4 text-slate-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.avgScore ?? 0}%</div>
+            <div className="text-2xl font-bold">
+              {stats != null ? `${stats.avgScore}%` : '—'}
+            </div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-slate-600">
-              Last Report
-            </CardTitle>
+            <CardTitle className="text-sm font-medium text-slate-600">Last Report</CardTitle>
             <Shield className="h-4 w-4 text-slate-500" />
           </CardHeader>
           <CardContent>
             <div className="text-sm">
-              {stats?.lastReport
-                ? `${stats.lastReport.company}: ${stats.lastReport.score}%`
-                : 'No reports yet'}
+              {lastReport ? (
+                <Link
+                  href={`/report/${lastReport.id}`}
+                  className="text-emerald-600 hover:underline"
+                >
+                  {lastReport.companyName}: {lastReport.score}%
+                </Link>
+              ) : (
+                <span className="text-slate-400">No reports yet</span>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -127,15 +101,9 @@ export default function DashboardPage() {
             <CardTitle>Get Started</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            <p className="text-sm text-slate-600">
-              1. Add a company with industry and financial year-end
-            </p>
-            <p className="text-sm text-slate-600">
-              2. Upload a trial balance (CSV or Excel)
-            </p>
-            <p className="text-sm text-slate-600">
-              3. Run compliance checks and view the report
-            </p>
+            <p className="text-sm text-slate-600">1. Add a company with industry and financial year-end</p>
+            <p className="text-sm text-slate-600">2. Upload a trial balance (CSV or Excel)</p>
+            <p className="text-sm text-slate-600">3. Run compliance checks and view the report</p>
             <Link href="/companies">
               <Button>Manage Companies</Button>
             </Link>
@@ -146,7 +114,7 @@ export default function DashboardPage() {
             <CardTitle>Compliance Areas</CardTitle>
           </CardHeader>
           <CardContent>
-            <ul className="text-sm text-slate-600 space-y-1">
+            <ul className="space-y-1 text-sm text-slate-600">
               <li>• IFRS-aligned financial statement checks</li>
               <li>• Companies Act completeness indicators</li>
               <li>• SARS VAT, PAYE, Provisional tax checks</li>
