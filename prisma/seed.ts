@@ -14,6 +14,8 @@ const COMPLIANCE_RULES = [
   { code: 'PROVISIONAL_TAX', name: 'Provisional Tax Completeness', category: 'TAX', description: 'Income tax provisioning check', severity: 'MEDIUM' },
   { code: 'DUPLICATE_ENTRIES', name: 'Duplicate Entries', category: 'VALIDATION', description: 'Detects duplicate account entries', severity: 'LOW' },
   { code: 'LARGE_VALUES', name: 'Large Unexplained Values', category: 'VALIDATION', description: 'Flags unusually large line items', severity: 'LOW' },
+  { code: 'BS_BALANCE', name: 'Balance Sheet Equation', category: 'IFRS', description: 'Verifies assets equal equity plus liabilities', severity: 'HIGH' },
+  { code: 'IS_REVENUE_PRESENT', name: 'Revenue Account Presence', category: 'IFRS', description: 'Confirms revenue accounts exist for income statement derivation', severity: 'MEDIUM' },
 ];
 
 // Sample South African trial balance data (ZAR)

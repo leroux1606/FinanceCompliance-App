@@ -25,8 +25,9 @@ model Company {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  trialBalances  TrialBalance[]
-  reports        ComplianceReport[]
+  trialBalances       TrialBalance[]
+  reports             ComplianceReport[]
+  financialStatements FinancialStatement[]
 }
 
 model TrialBalance {
@@ -36,9 +37,10 @@ model TrialBalance {
   periodEnd DateTime // Financial period end date
   uploadedAt DateTime @default(now())
 
-  entries        TrialBalanceEntry[]
-  checkResults   ComplianceCheckResult[]
-  reports        ComplianceReport[]
+  entries             TrialBalanceEntry[]
+  checkResults        ComplianceCheckResult[]
+  reports             ComplianceReport[]
+  financialStatement  FinancialStatement?
 
   @@index([companyId])
 }
@@ -102,4 +104,18 @@ model ComplianceReport {
 
   @@index([companyId])
   @@index([trialBalanceId])
+}
+
+model FinancialStatement {
+  id             String       @id @default(cuid())
+  trialBalanceId String       @unique
+  companyId      String
+  periodEnd      DateTime
+  generatedAt    DateTime     @default(now())
+  dataJson       String       // JSON of FinancialStatementsResult (income statement, balance sheet, cash flow)
+
+  trialBalance   TrialBalance @relation(fields: [trialBalanceId], references: [id], onDelete: Cascade)
+  company        Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
 }

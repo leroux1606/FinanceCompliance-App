@@ -66,6 +66,9 @@ export default function ReportPage({ params }: { params: { id: string } }) {
           <a href={`/api/reports/${report.id}/pdf`} download>
             <Button>Download PDF</Button>
           </a>
+          <Link href={`/financial-statement/${report.trialBalance.id}`}>
+            <Button variant="outline">Financial Statements</Button>
+          </Link>
           <Link href={`/companies/${report.company.id}`}>
             <Button variant="outline">Back</Button>
           </Link>

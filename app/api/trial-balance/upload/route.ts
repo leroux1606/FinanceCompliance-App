@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/src/lib/db';
 import { parseCSV, parseExcel, validateColumns } from '@/src/lib/compliance-engine';
 import { runComplianceChecks } from '@/src/lib/compliance-engine';
+import { generateFinancialStatements } from '@/src/lib/financial-engine';
 import { requireSession } from '@/src/lib/auth';
 
 export async function POST(request: Request) {
@@ -139,6 +140,16 @@ export async function POST(request: Request) {
       },
     });
 
+    const financialStatements = generateFinancialStatements(rows);
+    await prisma.financialStatement.create({
+      data: {
+        trialBalanceId: trialBalance.id,
+        companyId,
+        periodEnd: new Date(periodEnd),
+        dataJson: JSON.stringify(financialStatements),
+      },
+    });
+
     const tbWithEntries = await prisma.trialBalance.findUnique({
       where: { id: trialBalance.id },
       include: { entries: true, checkResults: { include: { rule: true } } },
@@ -148,6 +159,7 @@ export async function POST(request: Request) {
       trialBalance: tbWithEntries,
       complianceSummary: summary,
       reportId: report.id,
+      financialStatementId: trialBalance.id,
     });
   } catch (error) {
     console.error('[API] Trial balance upload error:', error);

@@ -26,10 +26,10 @@ const SAMPLE_ROWS: TrialBalanceRow[] = [
 ];
 
 describe('runComplianceChecks (orchestrator)', () => {
-  it('returns a summary with 10 check results', () => {
+  it('returns a summary with 12 check results', () => {
     const summary = runComplianceChecks(SAMPLE_ROWS);
-    expect(summary.results).toHaveLength(10);
-    expect(summary.totalChecks).toBe(10);
+    expect(summary.results).toHaveLength(12);
+    expect(summary.totalChecks).toBe(12);
   });
 
   it('all check results have required fields', () => {
@@ -73,10 +73,10 @@ describe('runComplianceChecks (orchestrator)', () => {
   it('handles empty rows without throwing', () => {
     expect(() => runComplianceChecks([])).not.toThrow();
     const summary = runComplianceChecks([]);
-    expect(summary.results).toHaveLength(10);
+    expect(summary.results).toHaveLength(12);
   });
 
-  it('all 10 rule codes are present in results', () => {
+  it('all 12 rule codes are present in results', () => {
     const EXPECTED_CODES = [
       'TB_BALANCE',
       'REV_EXP_REASONABILITY',
@@ -88,6 +88,8 @@ describe('runComplianceChecks (orchestrator)', () => {
       'PROVISIONAL_TAX',
       'DUPLICATE_ENTRIES',
       'LARGE_VALUES',
+      'BS_BALANCE',
+      'IS_REVENUE_PRESENT',
     ];
     const summary = runComplianceChecks(SAMPLE_ROWS);
     const codes = summary.results.map((r) => r.ruleCode);

@@ -1,4 +1,6 @@
 import type { TrialBalanceRow, CheckResult } from './types';
+import { generateIncomeStatement } from '../financial-engine/income-statement';
+import { generateBalanceSheet } from '../financial-engine/balance-sheet';
 
 // Key accounts expected per IFRS / SA practice
 const EXPECTED_ACCOUNTS = [
@@ -409,5 +411,70 @@ export function runLargeUnexplainedValues(rows: TrialBalanceRow[]): CheckResult 
     status: 'COMPLIANT',
     riskScore: 0,
     message: 'Some large values present. Ensure they are expected and properly documented.',
+  };
+}
+
+export function runBalanceSheetBalance(rows: TrialBalanceRow[]): CheckResult {
+  const is = generateIncomeStatement(rows);
+  const bs = generateBalanceSheet(rows, is.netProfit);
+
+  if (bs.isBalanced) {
+    return {
+      ruleCode: 'BS_BALANCE',
+      ruleName: 'Balance Sheet Equation',
+      category: 'IFRS',
+      status: 'COMPLIANT',
+      riskScore: 0,
+      message: `Balance sheet balances. Total assets (R${bs.totalAssets.toLocaleString('en-ZA')}) equal total equity and liabilities.`,
+      details: { totalAssets: bs.totalAssets, totalEquityAndLiabilities: bs.totalEquityAndLiabilities },
+    };
+  }
+
+  return {
+    ruleCode: 'BS_BALANCE',
+    ruleName: 'Balance Sheet Equation',
+    category: 'IFRS',
+    status: 'HIGH_RISK',
+    riskScore: 75,
+    message: `Balance sheet does not balance. Assets (R${bs.totalAssets.toLocaleString('en-ZA')}) ≠ Equity + Liabilities (R${bs.totalEquityAndLiabilities.toLocaleString('en-ZA')}). Difference: R${bs.difference.toLocaleString('en-ZA')}. Some accounts may not be recognised by the classifier — review account names.`,
+    details: { totalAssets: bs.totalAssets, totalEquityAndLiabilities: bs.totalEquityAndLiabilities, difference: bs.difference },
+  };
+}
+
+export function runRevenuePresentCheck(rows: TrialBalanceRow[]): CheckResult {
+  const revenueAccounts = findAccounts(rows, /revenue|sales|turnover/i);
+  const revenueTotal = revenueAccounts.reduce((s, r) => s + (r.credit - r.debit), 0);
+
+  if (revenueAccounts.length > 0 && revenueTotal > 0) {
+    return {
+      ruleCode: 'IS_REVENUE_PRESENT',
+      ruleName: 'Revenue Account Presence',
+      category: 'IFRS',
+      status: 'COMPLIANT',
+      riskScore: 0,
+      message: `Revenue accounts identified. Total revenue: R${revenueTotal.toLocaleString('en-ZA')}. Income statement can be derived from the trial balance.`,
+      details: { accountCount: revenueAccounts.length, revenueTotal },
+    };
+  }
+
+  if (revenueAccounts.length > 0 && revenueTotal <= 0) {
+    return {
+      ruleCode: 'IS_REVENUE_PRESENT',
+      ruleName: 'Revenue Account Presence',
+      category: 'IFRS',
+      status: 'WARNING',
+      riskScore: 40,
+      message: 'Revenue accounts found but show no net credit balance. Verify that revenue is correctly recorded as a credit balance.',
+      details: { accountCount: revenueAccounts.length, revenueTotal },
+    };
+  }
+
+  return {
+    ruleCode: 'IS_REVENUE_PRESENT',
+    ruleName: 'Revenue Account Presence',
+    category: 'IFRS',
+    status: 'WARNING',
+    riskScore: 35,
+    message: 'No revenue accounts identifiable from account names. Ensure at least one account is named with "Revenue", "Sales", or "Turnover" to support IFRS income statement preparation.',
   };
 }

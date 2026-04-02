@@ -10,6 +10,8 @@ import {
   runProvisionalTaxIndicators,
   runDuplicateEntries,
   runLargeUnexplainedValues,
+  runBalanceSheetBalance,
+  runRevenuePresentCheck,
 } from './checks';
 
 const ALL_CHECKS = [
@@ -23,6 +25,8 @@ const ALL_CHECKS = [
   runProvisionalTaxIndicators,
   runDuplicateEntries,
   runLargeUnexplainedValues,
+  runBalanceSheetBalance,
+  runRevenuePresentCheck,
 ];
 
 export function runComplianceChecks(rows: TrialBalanceRow[]): ComplianceSummary {

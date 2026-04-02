@@ -11,7 +11,12 @@ interface Company {
   name: string;
   industry: string;
   financialYearEnd: string;
-  trialBalances: { id: string; periodEnd: string; uploadedAt: string }[];
+  trialBalances: {
+    id: string;
+    periodEnd: string;
+    uploadedAt: string;
+    financialStatement: { id: string } | null;
+  }[];
   reports: { id: string; trialBalanceId: string; complianceScore: number; riskLevel: string; generatedAt: string }[];
 }
 
@@ -52,7 +57,7 @@ export default function CompanyDetailPage({ params }: { params: { id: string } }
         </Link>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader>
             <CardTitle>Trial Balances</CardTitle>
@@ -83,6 +88,34 @@ export default function CompanyDetailPage({ params }: { params: { id: string } }
                     })()}
                   </li>
                 ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Financial Statements</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {company.trialBalances.filter((tb) => tb.financialStatement).length === 0 ? (
+              <p className="text-slate-500">No financial statements generated yet.</p>
+            ) : (
+              <ul className="space-y-3">
+                {company.trialBalances
+                  .filter((tb) => tb.financialStatement)
+                  .map((tb) => (
+                    <li key={tb.id} className="flex items-center justify-between rounded-lg border p-3">
+                      <span className="text-sm">
+                        Period: {new Date(tb.periodEnd).toLocaleDateString('en-ZA')}
+                      </span>
+                      <Link href={`/financial-statement/${tb.id}`}>
+                        <Button variant="outline" size="sm">
+                          View
+                        </Button>
+                      </Link>
+                    </li>
+                  ))}
               </ul>
             )}
           </CardContent>

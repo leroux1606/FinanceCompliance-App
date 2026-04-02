@@ -15,7 +15,10 @@ export async function GET(
       include: {
         trialBalances: {
           orderBy: { uploadedAt: 'desc' },
-          include: { checkResults: { include: { rule: true } } },
+          include: {
+            checkResults: { include: { rule: true } },
+            financialStatement: { select: { id: true } },
+          },
         },
         reports: { orderBy: { generatedAt: 'desc' }, include: { company: true } },
       },
